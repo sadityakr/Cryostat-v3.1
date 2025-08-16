@@ -1,20 +1,9 @@
-from pymeasure.instruments import Instrument
-from pymeasure.adapters import VISAAdapter
+from pymeasure.instruments.oxfordinstruments.base import OxfordInstrumentsBase
 import time
-import pyvisa
 
-class OI_ILM_210(Instrument):
+class OI_ILM_210(OxfordInstrumentsBase):
     def __init__(self, adapter, name="OI ILM 210", **kwargs):
         super().__init__(adapter, name, **kwargs)
-        
-        # Set VISA attributes for serial communication
-        try:
-            self.adapter.connection.set_visa_attribute(pyvisa.constants.VI_ATTR_ASRL_STOP_BITS, 
-                                                    pyvisa.constants.VI_ASRL_STOP_TWO)
-        except Exception as e:
-            print(f"Could not set VISA attributes: {e}")
-        
-        self._number = 1  # ISOBUS instrument number
         
         # Initialize instrument
         self._initialize()
@@ -27,39 +16,6 @@ class OI_ILM_210(Instrument):
         except Exception as e:
             print(f"Initial communication failed: {e}")
     
-    def _execute(self, message):
-        """Execute command with ISOBUS addressing."""
-        try:
-            # Add ISOBUS instrument number prefix
-            command = f"@{self._number}{message}"
-            self.write(command)
-            time.sleep(0.07)  # wait for device to respond
-            return self.read()
-        except Exception as e:
-            print(f"Communication error: {e}")
-            return None
-    
-    def get_idn(self):
-        """Get instrument identification."""
-        try:
-            version_response = self._get_version()
-            if version_response:
-                idstr = version_response.split()
-                if len(idstr) >= 6:
-                    idparts = [idstr[3] + ' ' + idstr[4], idstr[0], idstr[5],
-                               idstr[1] + ' ' + idstr[2]]
-                else:
-                    idparts = [None, None, None, None]
-                if len(idparts) < 4:
-                    idparts += [None] * (4 - len(idparts))
-            else:
-                idparts = [None, None, None, None]
-            
-            return dict(zip(('vendor', 'model', 'serial', 'firmware'), idparts))
-        except Exception as e:
-            print(f'Error getting IDN: {e}')
-            return dict(zip(('vendor', 'model', 'serial', 'firmware'), [None]*4))
-    
     def get_all(self):
         """Read all implemented parameters from the instrument."""
         try:
@@ -69,13 +25,9 @@ class OI_ILM_210(Instrument):
         except Exception as e:
             print(f"Error reading parameters: {e}")
     
-    def _get_version(self):
-        """Identify the device."""
-        return self._execute('V')
-    
     def get_level(self):
         """Get Helium level of channel 1."""
-        result = self._execute('R1')
+        result = self.ask('R1')
         if result:
             try:
                 return float(result.replace("R", "")) / 10
@@ -86,7 +38,7 @@ class OI_ILM_210(Instrument):
     
     def get_status(self):
         """Get status of the device."""
-        result = self._execute('X')
+        result = self.ask('X')
         if result and len(result) > 1:
             usage = {
                 0: "Channel not in use",
@@ -104,7 +56,7 @@ class OI_ILM_210(Instrument):
     
     def get_rate(self):
         """Get helium meter channel 1 probe rate."""
-        result = self._execute('X')
+        result = self.ask('X')
         if result and len(result) >= 10:
             try:
                 # Status format: XabcSuuvvwwRzz
@@ -144,20 +96,20 @@ class OI_ILM_210(Instrument):
             3: "Remote and unlocked",
         }
         print(f"Setting remote control status to {status.get(mode, 'Unknown')}")
-        self._execute(f'C{mode}')
+        self.write(f'C{mode}')
     
     def set_to_slow(self):
         """Set helium meter channel 1 to slow mode."""
         self.set_remote_status(1)
         print("Setting Helium Probe in SLOW rate")
-        self._execute('S1')
+        self.write('S1')
         self.set_remote_status(3)
     
     def set_to_fast(self):
         """Set helium meter channel 1 to fast mode."""
         self.set_remote_status(1)
         print("Setting Helium Probe in FAST rate")
-        self._execute('T1')
+        self.write('T1')
         self.set_remote_status(3)
     
     def set_rate(self, rate):
