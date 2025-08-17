@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from pymeasure.adapters import VISAAdapter
-from oi_ilm_210 import OI_ILM_210
+from oi_ilm210 import OI_ILM210
 import time
 
 class ILM210GUI:

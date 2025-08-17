@@ -1,8 +1,8 @@
 from pymeasure.instruments.oxfordinstruments.base import OxfordInstrumentsBase
 import time
 
-class OI_ILM_210(OxfordInstrumentsBase):
-    def __init__(self, adapter, name="OI ILM 210", **kwargs):
+class OI_ILM210(OxfordInstrumentsBase):
+    def __init__(self, adapter, name="OI ILM210", **kwargs):
         super().__init__(adapter, name, **kwargs)
         
         # Initialize instrument
